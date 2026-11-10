@@ -1,0 +1,47 @@
+name: Heat Bot
+
+on:
+  schedule:
+    - cron: "5 13 * * 1-5"
+    - cron: "5 14 * * 1-5"
+    - cron: "5 15 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "demo = test Telegram with old TSLA data"
+        type: choice
+        options: [demo, premarket, orb]
+        default: demo
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get the Day Trader skill pack (pinned commit)
+        uses: actions/checkout@v4
+        with:
+          repository: Jakeschincariol/day-trader-skill
+          ref: 3d0f4ef6986f4984b7c6bd46f7ff4f87744c3abd
+          path: day-trader-skill
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SEC_USER_AGENT: ${{ secrets.SEC_USER_AGENT }}
+          HEAT_NO_WATCH: ${{ vars.HEAT_NO_WATCH }}
+        run: |
+          MODE="${{ github.event.inputs.mode || 'auto' }}"
+          EXTRA=""
+          if [ "$MODE" = "orb" ]; then EXTRA="--no-wait"; fi
+          python3 heat.py "$MODE" $EXTRA
